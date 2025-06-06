@@ -288,7 +288,7 @@
     <div class="events-page-container">
         <div class="page-title-header">
             <h2>Eventos da Igreja</h2>
-            <button type="button" class="add-event-btn" id="showAddEventFormBtn">
+            <button type="button" class="add-event-btn" id="showAddEventFormBtn" style="display:none;">
                 <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 Adicionar Novo Evento
             </button>
@@ -424,6 +424,18 @@
             cancelAddEventBtn.addEventListener('click', () => toggleAddEventFormDisplay(false));
         }
 
+        // Exibe botão de adicionar evento apenas para usuários autenticados
+        async function toggleAddEventButton() {
+            if (!supabaseClient) return;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            const showAddEventFormBtn = document.getElementById('showAddEventFormBtn');
+            if (session && session.user) {
+                if (showAddEventFormBtn) showAddEventFormBtn.style.display = 'flex';
+            } else {
+                if (showAddEventFormBtn) showAddEventFormBtn.style.display = 'none';
+            }
+        }
+
         async function fetchEvents() {
             const eventListContainer = document.getElementById('eventListContainer');
             if (!supabaseClient || !eventListContainer) return;
@@ -453,7 +465,7 @@
             }
 
             if (events && events.length > 0) {
-                eventListContainer.innerHTML = ''; 
+                eventListContainer.innerHTML = '';
                 events.forEach(event => {
                     const eventCard = document.createElement('div');
                     eventCard.classList.add('event-card');
@@ -465,17 +477,17 @@
                             <h3>${event.title}</h3>
                             <p class="event-info">
                                 <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
-                                ${eventDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })} às ${eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                ${event.event_date && event.event_time ? (new Date(event.event_date + 'T' + event.event_time)).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' }) + ' às ' + (new Date(event.event_date + 'T' + event.event_time)).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Data não informada'}
                             </p>
                             <p class="event-info">
                                 <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                                ${event.location}
+                                ${event.location || 'Local não informado'}
                             </p>
                             <p class="event-description">
-                                ${event.description.substring(0, 100)}${event.description.length > 100 ? '...' : ''}
+                                ${event.description ? event.description.substring(0, 100) + (event.description.length > 100 ? '...' : '') : ''}
                             </p>
                             <div class="event-actions">
-                                <button type="button">Ver Detalhes</button>
+                                <button type="button" disabled style="opacity:0.6;cursor:not-allowed;">Ver Detalhes</button>
                             </div>
                         </div>
                     `;
@@ -503,7 +515,7 @@
                 let imageUrlToSave = null;
 
                 if (imageFile) {
-                    const fileName = `events/${user.id}_${Date.now()}_${imageFile.name}`;
+                    const fileName = `events/${session.user.id}_${Date.now()}_${imageFile.name}`;
                     alert(`Simulando upload da imagem do evento: ${fileName}. Numa app real, aqui ocorreria o upload.`);
                     // const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('event_images').upload(fileName, imageFile);
                     // if (uploadError) { console.error('Erro upload imagem evento:', uploadError); alert('Erro ao carregar imagem.'); }
@@ -520,7 +532,7 @@
                         location, 
                         description, 
                         image_url: imageUrlToSave, 
-                        created_by: user.id 
+                        created_by: session.user.id 
                     }])
                     .select();
 
@@ -536,6 +548,7 @@
         
         document.addEventListener('DOMContentLoaded', () => {
             checkSessionAndSetupHeader();
+            toggleAddEventButton();
             fetchEvents(); 
         });
     </script>
