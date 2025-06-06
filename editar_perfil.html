@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Perfil - Igreja Conectada</title>
+    <link rel="stylesheet" href="css/global.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/supabaseClient.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            color: #1c1e21;
+            line-height: 1.4;
+        }
+        * { box-sizing: border-box; }
+        a { text-decoration: none; color: #1877f2; }
+        a:hover { text-decoration: underline; }
+        button { cursor: pointer; font-family: inherit; }
+        input, textarea, select { font-family: inherit; }
+
+        .main-header {
+            background-color: #1877f2; color: white; padding: 8px 15px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky;
+            top: 0; z-index: 1000; width: 100%;
+        }
+        .main-header .logo a { color: white; text-decoration: none; font-size: 1.4em; font-weight: 600; }
+        .main-header .header-nav a, .main-header .user-actions a {
+            color: white; text-decoration: none; margin-left: 15px; font-size: 0.9em;
+            display: inline-flex; align-items: center;
+        }
+        .main-header .user-actions svg, .main-header .header-nav svg {
+            vertical-align: middle; margin-right: 4px; width: 18px; height: 18px; fill: white;
+        }
+        .main-header .user-actions .username-display { font-weight: 500; margin-right: 10px;}
+        #adminLinkHeader, #logoutButtonHeader, #profileLinkHeader, #dashboardLinkNavHeader { display: none; }
+        #loginLinkHeader {display: inline-flex;}
+
+        .edit-profile-container {
+            max-width: 700px; 
+            margin: 20px auto;
+            padding: 0 15px 20px 15px;
+        }
+
+        .fb-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 20px; 
+            margin-bottom: 20px;
+        }
+        .fb-card h2 {
+            margin-top: 0;
+            font-size: 1.5em; /* Ajustado para título da página */
+            color: #050505;
+            border-bottom: 1px solid #e9ebee;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+         .fb-card h3 { /* Para subtítulos dentro do card */
+            margin-top: 20px;
+            font-size: 1.1em;
+            color: #1c1e21;
+            border-bottom: 1px solid #f0f2f5;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .fb-card h3:first-of-type {
+            margin-top:0; /* Remover margem do primeiro subtítulo */
+        }
+
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.9em;
+            color: #333;
+            margin-bottom: 6px;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="password"],
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.95em;
+            font-family: inherit;
+        }
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .form-group input[type="file"] {
+            font-size: 0.9em;
+            padding: 5px 0;
+        }
+        .form-group .readonly-field {
+            background-color: #f0f2f5;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.95em;
+            color: #606770;
+            border: 1px solid #ddd;
+            margin-top: 2px; /* Pequena margem para alinhar com inputs */
+        }
+        .form-group .profile-picture-preview,
+        .form-group .cover-photo-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            margin-top: 8px;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid #ddd;
+            display: inline-block; /* Para ficar ao lado do input file se houver espaço */
+        }
+        .form-group .cover-photo-preview {
+            width: 100%;
+            height: 150px;
+            border-radius: 6px;
+            display: block; /* Ocupar linha inteira */
+        }
+
+        .form-actions {
+            margin-top: 25px;
+            display: flex;
+            justify-content: flex-end; 
+            gap: 10px;
+        }
+        .form-actions button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .form-actions button.primary {
+            background-color: #1877f2;
+            color: white;
+        }
+        .form-actions button.secondary {
+            background-color: #e4e6eb;
+            color: #050505;
+        }
+        .form-actions button:hover {
+            filter: brightness(0.95);
+        }
+
+        /* Responsividade */
+        @media (max-width: 600px) {
+            .main-header .header-nav { display: none; }
+            .fb-header h1 { font-size: 1.3em; }
+            .edit-profile-container { padding: 0 10px 15px 10px; margin-top: 15px;}
+            .fb-card { padding: 15px; }
+            .fb-card h2 { font-size: 1.3em; margin-bottom: 15px;}
+            .fb-card h3 { font-size: 1.05em; }
+            .form-group input[type="text"],
+            .form-group input[type="email"],
+            .form-group input[type="password"],
+            .form-group textarea,
+            .form-group select,
+            .form-group .readonly-field {
+                font-size: 0.9em;
+                padding: 8px;
+            }
+            .form-actions { flex-direction: column; gap: 8px;}
+            .form-actions button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo">
+            <a href="./dashboard.html">Igreja Conectada</a>
+        </div>
+        <nav class="header-nav">
+            <a href="./dashboard_feed_layout_v1.html" id="dashboardLinkNavHeader">
+                <svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3zm5 15h-2v-6H9v6H7v-7.81l5-4.5 5 4.5V18z"/></svg>
+                <span>Dashboard</span>
+            </a>
+            <a href="./eventos.html">Eventos</a>
+            <a href="./pedido de oração.html">Pedidos de Oração</a>
+            <a href="./doações.html">Doações</a>
+        </nav>
+        <div class="user-actions">
+            <span id="usernameDisplayHeader" class="username-display" style="display:none;"></span>
+            <a href="./Perfil.html" id="profileLinkHeader" style="display:none;">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                <span>Perfil</span>
+            </a>
+            <a href="./admin_panel.html" id="adminLinkHeader" style="display:none;">
+                 <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.44 2.67 14.2 2.5 13.96 2.5h-4c-.25 0-.48.17-.54.42l-.38 2.65c-.61-.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c.04.32.07.65.07.98s-.03.66-.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.06.25.29.42.54.42h4c.25 0 .48-.17.54-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+                <span>Admin</span>
+            </a>
+            <a href="#" id="logoutButtonHeader" style="display:none;">
+                <svg viewBox="0 0 24 24"><path d="M16 17v-3H9v-4h7V7l5 5-5 5zM14 2a2 2 0 0 1 2 2v2h-2V4H5v16h9v-2h2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9z"/></svg>
+                <span>Sair</span>
+            </a>
+            <a href="./login.html" id="loginLinkHeader">Login</a>
+        </div>
+    </header>
+
+    <div class="edit-profile-container">
+        <div class="fb-card">
+            <h2>Editar Perfil</h2>
+
+            <form id="editProfileForm">
+                <h3>Informações Visuais</h3>
+                <div class="form-group">
+                    <label for="profile_picture_upload">Nova Foto de Perfil</label>
+                    <input type="file" id="profile_picture_upload" name="profile_picture_upload" accept="image/*">
+                    <div class="profile-picture-preview" id="profilePicturePreviewCurrent" style="background-image: url('https://placehold.co/120x120/cccccc/757575?text=?');" aria-label="Pré-visualização do avatar do perfil" role="img">
+                        <span style="display:block; text-align:center; font-size:0.7em; padding-top:50px; color:#555;">Atual</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="cover_photo_upload">Nova Foto de Capa</label>
+                    <input type="file" id="cover_photo_upload" name="cover_photo_upload" accept="image/*">
+                    <div class="cover-photo-preview" id="coverPhotoPreviewCurrent" style="background-image: url('https://placehold.co/600x150/cccccc/757575?text=Capa Atual');"></div>
+                </div>
+                
+                <h3>Informações Pessoais</h3>
+                <div class="form-group">
+                    <label for="edit_full_name">Nome Completo</label>
+                    <input type="text" id="edit_full_name" name="edit_full_name">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_bio">Bio / Descrição</label>
+                    <textarea id="edit_bio" name="edit_bio" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_location">Mora em</label>
+                    <input type="text" id="edit_location" name="edit_location">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_favorite_verse">Versículo Favorito</label>
+                    <input type="text" id="edit_favorite_verse" name="edit_favorite_verse">
+                </div>
+                
+                <h3>Informações da Igreja (Editáveis pelo Utilizador)</h3>
+                <div class="form-group">
+                    <label for="edit_church_role">Seu Cargo/Função na Igreja</label>
+                    <input type="text" id="edit_church_role" name="edit_church_role" placeholder="Ex: Membro, Líder de Jovens, Músico">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_status">Seu Status na Comunidade</label>
+                    <select id="edit_status" name="edit_status">
+                        <option value="Membro">Membro</option>
+                        <option value="Voluntário">Voluntário</option>
+                        <option value="Visitante">Visitante</option>
+                        <option value="Líder de Ministério">Líder de Ministério</option>
+                    </select>
+                </div>
+
+                <hr style="margin: 25px 0; border: 0; border-top: 1px solid #e9ebee;">
+                <h3>Informações da Igreja (Definidas pela Administração)</h3>
+
+                <div class="form-group">
+                    <label>Nome da Igreja</label>
+                    <div class="readonly-field" id="readonly_church_name">Igreja Exemplo da Comunidade</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Seu Ministério Principal (se aplicável)</label>
+                    <div class="readonly-field" id="readonly_ministry">Aguardando designação do admin</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Membro Desde</label>
+                    <div class="readonly-field" id="readonly_member_since">Carregando...</div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="secondary" onclick="window.location.href='./perfil.html'">Cancelar</button>
+                    <button type="submit" class="primary">Guardar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Removido SUPABASE_URL e SUPABASE_ANON_KEY duplicados
+        // let supabaseClient = null;
+        const supabaseClient = initSupabase();
+
+        if (!supabaseClient) {
+            NotificationSystem.error('Erro de configuração do Supabase.');
+        }
+
+        const usernameDisplayHeader = document.getElementById('usernameDisplayHeader');
+        const profileLinkHeader = document.getElementById('profileLinkHeader');
+        const adminLinkHeader = document.getElementById('adminLinkHeader');
+        const logoutButtonHeader = document.getElementById('logoutButtonHeader');
+        const loginLinkHeader = document.getElementById('loginLinkHeader');
+        const dashboardLinkHeader = document.getElementById('dashboardLinkNavHeader');
+
+        async function checkSessionAndSetupHeader() {
+            if (!supabaseClient) return;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session && session.user) {
+                // Integração REST Supabase: buscar full_name do usuário logado
+                try {
+                    const url = `https://bilhtpgelctnybjemzeg.supabase.co/rest/v1/profiles?select=full_name&id=eq.${session.user.id}`;
+                    const response = await fetch(url, {
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.ANON_KEY,
+                            'Authorization': `Bearer ${session.access_token}`
+                        }
+                    });
+                    const restData = await response.json();
+                    if (restData && restData.length > 0) {
+                        console.log('REST full_name:', restData[0].full_name);
+                    }
+                } catch (err) {
+                    console.error('Erro na requisição REST do Supabase:', err);
+                }
+
+                const { data: profile } = await supabaseClient.from('profiles').select('full_name').eq('id', session.user.id).single();
+                if(usernameDisplayHeader) {
+                    usernameDisplayHeader.textContent = profile?.full_name || session.user.email;
+                    usernameDisplayHeader.style.display = 'inline';
+                }
+                if(profileLinkHeader) profileLinkHeader.style.display = 'inline-flex';
+                if(adminLinkHeader) adminLinkHeader.style.display = 'inline-flex'; // Ajustar com roles
+                if(logoutButtonHeader) logoutButtonHeader.style.display = 'inline-flex';
+                if(loginLinkHeader) loginLinkHeader.style.display = 'none';
+                if(dashboardLinkHeader) dashboardLinkHeader.style.display = 'inline-flex';
+            } else {
+                if(usernameDisplayHeader) usernameDisplayHeader.style.display = 'none';
+                if(profileLinkHeader) profileLinkHeader.style.display = 'none';
+                if(adminLinkHeader) adminLinkHeader.style.display = 'none';
+                if(logoutButtonHeader) logoutButtonHeader.style.display = 'none';
+                if(loginLinkHeader) loginLinkHeader.style.display = 'inline-flex';
+                if(dashboardLinkHeader) dashboardLinkHeader.style.display = 'none';
+                window.location.href = './login.html'; // Redireciona se não estiver logado
+            }
+        }
+         if (logoutButtonHeader) {
+            logoutButtonHeader.addEventListener('click', async (e) => {
+                e.preventDefault();
+                if (!supabaseClient) return;
+                await supabaseClient.auth.signOut();
+                window.location.href = './index.html';
+            });
+        }
+
+
+        async function loadProfileDataForEditing() {
+            if (!supabaseClient) {
+                alert('Erro ao conectar com o servidor.');
+                return;
+            }
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) {
+                alert('Você precisa estar logado para editar o perfil.');
+                window.location.href = './login.html';
+                return;
+            }
+
+            const { data: profile, error } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (error && error.code !== 'PGRST116') { // PGRST116: no rows found, o que é ok se for o primeiro login
+                console.error('Erro ao carregar perfil para edição:', error);
+                NotificationSystem.error('Erro ao carregar seus dados de perfil.');
+                return;
+            }
+            
+            if (profile) {
+                document.getElementById('edit_full_name').value = profile.full_name || '';
+                document.getElementById('edit_bio').value = profile.bio || '';
+                document.getElementById('edit_location').value = profile.location || '';
+                document.getElementById('edit_favorite_verse').value = profile.favorite_verse || '';
+                document.getElementById('edit_church_role').value = profile.church_role || '';
+                document.getElementById('edit_status').value = profile.status || 'Membro';
+                
+                if (profile.avatar_url) {
+                    document.getElementById('profilePicturePreviewCurrent').style.backgroundImage = `url('${profile.avatar_url}')`;
+                } else {
+                    document.getElementById('profilePicturePreviewCurrent').style.backgroundImage = `url('https://placehold.co/120x120/cccccc/757575?text=${(profile.full_name || user.email || 'P').charAt(0).toUpperCase()}')`;
+                }
+                if (profile.cover_photo_url) {
+                    document.getElementById('coverPhotoPreviewCurrent').style.backgroundImage = `url('${profile.cover_photo_url}')`;
+                } else {
+                     document.getElementById('coverPhotoPreviewCurrent').style.backgroundImage = `url('https://placehold.co/600x150/cccccc/757575?text=Capa')`;
+                }
+                
+                // Campos não editáveis pelo utilizador (apenas para visualização)
+                // O nome da igreja viria da configuração da app ou de um campo específico em profiles se fosse editável no registo
+                // document.getElementById('readonly_church_name').textContent = profile.church_name || 'Igreja Exemplo da Comunidade'; 
+                document.getElementById('readonly_ministry').textContent = profile.main_ministry || 'Não designado'; // Supondo um campo 'main_ministry'
+                document.getElementById('readonly_member_since').textContent = profile.created_at ? new Date(profile.created_at).toLocaleDateString('pt-BR', { year: 'numeric', month: 'long', day: 'numeric'}) : 'Não disponível';
+            } else {
+                 // Se não há perfil, pode ser um novo utilizador que ainda não tem entrada em 'profiles'
+                 // O trigger handle_new_user deveria ter criado.
+                 document.getElementById('edit_full_name').value = user.user_metadata?.full_name || user.email || '';
+                 console.warn("Nenhum perfil encontrado na tabela 'profiles' para este utilizador.");
+            }
+        }
+
+        const editProfileForm = document.getElementById('editProfileForm');
+        if (editProfileForm) {
+            editProfileForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!supabaseClient) { NotificationSystem.error('Cliente Supabase não inicializado.'); return; }
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (!user) { NotificationSystem.error('Sessão expirada. Faça login novamente.'); window.location.href = './login.html'; return; }
+
+                const updates = {
+                    id: user.id, 
+                    full_name: document.getElementById('edit_full_name').value.trim(),
+                    bio: document.getElementById('edit_bio').value.trim(),
+                    location: document.getElementById('edit_location').value.trim(),
+                    favorite_verse: document.getElementById('edit_favorite_verse').value.trim(),
+                    church_role: document.getElementById('edit_church_role').value.trim(),
+                    status: document.getElementById('edit_status').value,
+                    updated_at: new Date()
+                };
+
+                const profilePictureFile = document.getElementById('profile_picture_upload').files[0];
+                if (profilePictureFile) {
+                    const fileName = `avatars/${user.id}/${Date.now()}_${profilePictureFile.name}`;
+                    alert(`Simulando upload de avatar: ${fileName}. Numa app real, aqui ocorreria o upload.`);
+                    // const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('avatars').upload(fileName, profilePictureFile, { upsert: true });
+                    // if (uploadError) { console.error('Erro upload avatar:', uploadError); alert('Erro ao carregar foto de perfil.'); }
+                    // else { const { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(uploadData.path); updates.avatar_url = publicUrl; }
+                    updates.avatar_url = 'https://placehold.co/150x150/007bff/ffffff?text=NovaFoto'; // Placeholder
+                }
+                
+                const coverPhotoFile = document.getElementById('cover_photo_upload').files[0];
+                 if (coverPhotoFile) {
+                    const coverFileName = `covers/${user.id}/${Date.now()}_${coverPhotoFile.name}`;
+                    alert(`Simulando upload de capa: ${coverFileName}.`);
+                    // const { data: coverUploadData, error: coverUploadError } = await supabaseClient.storage.from('covers').upload(coverFileName, coverPhotoFile, { upsert: true });
+                    // if (coverUploadError) { console.error('Erro upload capa:', coverUploadError); alert('Erro ao carregar foto de capa.'); }
+                    // else { const { data: { publicUrl } } = supabaseClient.storage.from('covers').getPublicUrl(coverUploadData.path); updates.cover_photo_url = publicUrl; }
+                     updates.cover_photo_url = 'https://placehold.co/900x320/007bff/ffffff?text=NovaCapa'; // Placeholder
+                }
+
+                const { error: updateError } = await supabaseClient
+                    .from('profiles')
+                    .update(updates)
+                    .eq('id', user.id);
+
+                if (updateError) {
+                    NotificationSystem.error('Erro ao guardar alterações: ' + updateError.message);
+                } else {
+                    NotificationSystem.success('Perfil atualizado com sucesso!');
+                    window.location.href = './perfil.html'; 
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkSessionAndSetupHeader();
+            loadProfileDataForEditing();
+        });
+    </script>
+</body>
+</html>

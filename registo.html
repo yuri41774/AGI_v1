@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registo - Igreja Conectada</title>
+    <link rel="stylesheet" href="css/global.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/supabaseClient.js"></script>
+    <style>
+        /* Estilos Globais e Reset Básico */
+        body {
+            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            color: #1c1e21;
+            line-height: 1.4;
+            display: flex; 
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px 0; 
+        }
+        * {
+            box-sizing: border-box;
+        }
+        a {
+            text-decoration: none;
+            color: #1877f2;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        button {
+            cursor: pointer;
+            font-family: inherit;
+        }
+        input, textarea, select {
+            font-family: inherit;
+        }
+
+        /* Estilo do Card de Registo */
+        .registration-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            padding: 25px 30px; 
+            width: 100%;
+            max-width: 450px; 
+            text-align: center;
+        }
+        .registration-card h2 {
+            margin-top: 0;
+            color: #050505;
+            padding-bottom: 10px;
+            margin-bottom: 25px; 
+            font-weight: 600;
+            font-size: 1.8em; 
+            border-bottom: none; 
+        }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block; font-weight: 600; font-size: 0.85em;
+            color: #333; margin-bottom: 5px; text-align: left;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="password"] {
+            width: 100%; padding: 10px; border: 1px solid #ddd;
+            border-radius: 6px; box-sizing: border-box; font-size: 0.9em;
+        }
+        /* Removido .readonly-field pois o campo da igreja será editável */
+        .form-group .input-hint { 
+            font-size: 0.75em; color: #606770; margin-top: 4px; text-align: left;
+        }
+        
+        .form-actions { margin-top: 20px; display: flex; flex-direction:column; gap: 10px; }
+        .form-actions button {
+            width: 100%;
+            padding: 11px; 
+            border: none; border-radius: 6px;
+            font-weight: 600; cursor: pointer; font-size: 0.95em;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .form-actions button.primary { background-color: #1877f2; color: white; }
+        .form-actions button.primary:hover { background-color: #166fe5; }
+        .form-actions button.google-btn { background-color: #db4437; color: white; }
+        .form-actions button.google-btn:hover { background-color: #c23327; }
+        .form-actions button svg { width: 18px; height: 18px; fill: white;}
+
+        .separator {
+            display: flex; align-items: center; text-align: center;
+            color: #aaa; margin: 20px 0; font-size: 0.85em;
+        }
+        .separator::before, .separator::after {
+            content: ''; flex: 1; border-bottom: 1px solid #ddd;
+        }
+        .separator:not(:empty)::before { margin-right: .5em; }
+        .separator:not(:empty)::after { margin-left: .5em; }
+        
+        .login-link-footer { margin-top: 20px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="registration-card">
+        <h2>Criar Nova Conta</h2>
+        <form id="registrationForm">
+            <div class="form-group">
+                <label for="regFullName">Nome Completo</label>
+                <input type="text" id="regFullName" name="fullName" required>
+            </div>
+            <div class="form-group">
+                <label for="regEmail">Email</label>
+                <input type="email" id="regEmail" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="regPassword">Senha</label>
+                <input type="password" id="regPassword" name="password" minlength="6" required>
+                <p class="input-hint">Mínimo de 6 caracteres.</p>
+            </div>
+            <div class="form-group">
+                <label for="regConfirmPassword">Confirmar Senha</label>
+                <input type="password" id="regConfirmPassword" name="confirmPassword" minlength="6" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="regChurchName">Nome da Igreja</label>
+                <input type="text" id="regChurchName" name="churchName" placeholder="Ex: Igreja Exemplo da Comunidade" required>
+                 <p class="input-hint">A qual igreja você pertence?</p>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="primary">Registar</button>
+            </div>
+        </form>
+        <div class="separator">OU</div>
+        <div class="form-actions">
+            <button type="button" class="google-btn" id="googleSignUpBtn">
+                <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/><path d="M1 1h22v22H1z" fill="none"/></svg>
+                Registar com o Google
+            </button>
+        </div>
+        <div class="login-link-footer">
+            Já tem uma conta? <a href="index.html">Entre aqui</a>
+        </div>
+    </div>
+
+    <!-- Exemplo de avatar acessível para novo usuário -->
+    <!-- <img src="URL_DO_AVATAR" alt="Avatar do novo usuário NOME" aria-label="Avatar do novo usuário NOME" role="img"> -->
+
+    <script>
+        // Removido SUPABASE_URL e SUPABASE_ANON_KEY duplicados
+        // let supabaseClient = null;
+        const supabaseClient = window.supabaseClient;
+
+        if (!supabaseClient) {
+            NotificationSystem.error('Erro de configuração do Supabase.');
+        }
+
+        const registrationForm = document.getElementById('registrationForm');
+        if (registrationForm) {
+            registrationForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!supabaseClient) { NotificationSystem.error('Cliente Supabase não inicializado.'); return; }
+
+                const fullName = document.getElementById('regFullName').value;
+                const email = document.getElementById('regEmail').value;
+                const password = document.getElementById('regPassword').value;
+                const confirmPassword = document.getElementById('regConfirmPassword').value;
+                const churchName = document.getElementById('regChurchName').value; // Recolher nome da igreja
+
+                if (password !== confirmPassword) { NotificationSystem.error('As senhas não coincidem!'); return; }
+                if (password.length < 6) { NotificationSystem.error('A senha deve ter no mínimo 6 caracteres.'); return; }
+                if (!churchName.trim()) { NotificationSystem.error('Por favor, insira o nome da sua igreja.'); return; }
+
+
+                try {
+                    const { data, error } = await supabaseClient.auth.signUp({
+                        email: email, 
+                        password: password, 
+                        options: { 
+                            data: { 
+                                full_name: fullName,
+                                church_name: churchName // Passar nome da igreja como metadados
+                                // NOTA: Para persistir 'church_name', você precisará adicionar
+                                // uma coluna 'church_name' à sua tabela 'profiles' no Supabase
+                                // e atualizar o trigger 'handle_new_user' para incluir este campo.
+                            } 
+                        }
+                    });
+                    if (error) { 
+                        NotificationSystem.error('Erro ao registar: ' + error.message); 
+                    } else { 
+                        NotificationSystem.success('Registo realizado com sucesso! Verifique o seu email para confirmação (se aplicável). Redirecionando para o login...');
+                        registrationForm.reset();
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 1200);
+                    }
+                } catch (err) { NotificationSystem.error('Ocorreu um erro inesperado durante o registo.'); }
+            });
+        }
+
+        const googleSignUpBtn = document.getElementById('googleSignUpBtn');
+        if(googleSignUpBtn) {
+            googleSignUpBtn.addEventListener('click', () => {
+                if (!supabaseClient) { NotificationSystem.error('Cliente Supabase não inicializado.'); return; }
+                NotificationSystem.error('Registo com Google precisa de configuração adicional no Supabase e Google Cloud.');
+            });
+        }
+    </script>
+</body>
+</html>

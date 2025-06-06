@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eventos - Igreja Conectada</title>
+    <link rel="stylesheet" href="css/global.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/supabaseClient.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            color: #1c1e21;
+            line-height: 1.4;
+        }
+        * { box-sizing: border-box; }
+        a { text-decoration: none; color: #1877f2; }
+        a:hover { text-decoration: underline; }
+        button { cursor: pointer; font-family: inherit; }
+        input, textarea, select { font-family: inherit; }
+
+        .main-header {
+            background-color: #1877f2; color: white; padding: 8px 15px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky;
+            top: 0; z-index: 1000; width: 100%;
+        }
+        .main-header .logo a { color: white; text-decoration: none; font-size: 1.4em; font-weight: 600; }
+        .main-header .header-nav a, .main-header .user-actions a {
+            color: white; text-decoration: none; margin-left: 15px; font-size: 0.9em;
+            display: inline-flex; align-items: center;
+        }
+        .main-header .user-actions svg, .main-header .header-nav svg {
+            vertical-align: middle; margin-right: 4px; width: 18px; height: 18px; fill: white;
+        }
+        .main-header .user-actions .username-display { font-weight: 500; margin-right: 10px;}
+        #adminLinkHeader, #logoutButtonHeader, #profileLinkHeader, #dashboardLinkNavHeader { display: none; }
+        #loginLinkHeader {display: inline-flex;}
+
+        .events-page-container {
+            max-width: 900px; 
+            margin: 20px auto;
+            padding: 0 15px 20px 15px;
+        }
+
+        .page-title-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 15px;
+        }
+        .page-title-header h2 {
+            font-size: 1.8em;
+            color: #1c1e21;
+            margin: 0;
+        }
+        .add-event-btn {
+            background-color: #4CAF50; 
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        .add-event-btn svg {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            fill: white;
+        }
+        .add-event-btn:hover {
+            background-color: #45a049;
+        }
+
+        .add-event-form-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .add-event-form-container h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            color: #050505;
+            font-weight: 600;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            font-size: 0.85em;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="date"],
+        .form-group input[type="time"],
+        .form-group input[type="file"],
+        .form-group textarea {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.9em;
+            font-family: inherit;
+        }
+        .form-group textarea {
+            min-height: 70px;
+            resize: vertical;
+        }
+        .form-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .form-actions button {
+            padding: 9px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .form-actions button.primary {
+            background-color: #1877f2;
+            color: white;
+        }
+        .form-actions button.secondary {
+            background-color: #e4e6eb;
+            color: #050505;
+        }
+         .form-actions button:hover {
+            filter: brightness(0.95);
+        }
+
+        .events-filter {
+            margin-bottom: 20px; 
+            display: flex;
+            justify-content: flex-end; 
+        }
+        .events-filter select {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9em;
+            background-color: #fff;
+        }
+
+        .event-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 20px;
+        }
+
+        .event-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.2s ease-in-out;
+        }
+        .event-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .event-card .event-image {
+            width: 100%;
+            height: 160px; 
+            background-color: #e0e0e0; 
+            background-size: cover;
+            background-position: center;
+        }
+        .event-card .event-details {
+            padding: 15px;
+            flex-grow: 1; 
+            display: flex;
+            flex-direction: column;
+        }
+        .event-card .event-details h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 1.15em;
+            color: #050505;
+            font-weight: 600;
+        }
+        .event-card .event-info {
+            font-size: 0.85em;
+            color: #606770;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        .event-card .event-info svg {
+            width: 14px;
+            height: 14px;
+            fill: #606770;
+            margin-right: 6px;
+        }
+        .event-card .event-description {
+            font-size: 0.9em;
+            color: #1c1e21;
+            margin-bottom: 15px;
+            flex-grow: 1; 
+            white-space: pre-wrap; /* Para manter quebras de linha da descrição */
+        }
+        .event-card .event-actions button {
+            width: 100%;
+            padding: 9px 15px;
+            background-color: #1877f2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s ease;
+        }
+        .event-card .event-actions button:hover {
+            background-color: #166fe5;
+        }
+
+        /* Responsividade */
+        @media (max-width: 600px) {
+            .main-header .header-nav { display: none; }
+            .fb-header h1 { font-size: 1.3em; }
+            .events-page-container { margin-top: 15px; padding: 0 10px 15px 10px;}
+            .page-title-header { flex-direction: column; align-items: flex-start; gap: 10px;}
+            .page-title-header h2 { font-size: 1.5em; }
+            .add-event-form-container { padding: 15px; }
+            .add-event-form-container h3 { font-size: 1.2em; }
+            .event-list {
+                grid-template-columns: 1fr; 
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo">
+            <a href="./dashboard.html">Igreja Conectada</a>
+        </div>
+        <nav class="header-nav">
+            <a href="./dashboard_feed_layout_v1.html" id="dashboardLinkNavHeader">
+                <svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3zm5 15h-2v-6H9v6H7v-7.81l5-4.5 5 4.5V18z"/></svg>
+                <span>Dashboard</span>
+            </a>
+            <a href="./eventos.html">Eventos</a>
+            <a href="./pedido de oração.html">Pedidos de Oração</a>
+            <a href="./doações.html">Doações</a>
+        </nav>
+        <div class="user-actions">
+            <span id="usernameDisplayHeader" class="username-display" style="display:none;"></span>
+            <a href="./Perfil.html" id="profileLinkHeader" style="display:none;">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                <span>Perfil</span>
+            </a>
+            <a href="./admin_panel.html" id="adminLinkHeader" style="display:none;">
+                 <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.44 2.67 14.2 2.5 13.96 2.5h-4c-.25 0-.48.17-.54.42l-.38 2.65c-.61-.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c.04.32.07.65.07.98s-.03.66-.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.06.25.29.42.54.42h4c.25 0 .48-.17.54-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+                <span>Admin</span>
+            </a>
+            <a href="#" id="logoutButtonHeader" style="display:none;">
+                <svg viewBox="0 0 24 24"><path d="M16 17v-3H9v-4h7V7l5 5-5 5zM14 2a2 2 0 0 1 2 2v2h-2V4H5v16h9v-2h2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9z"/></svg>
+                <span>Sair</span>
+            </a>
+            <a href="./login.html" id="loginLinkHeader">Login</a>
+        </div>
+    </header>
+
+    <div class="events-page-container">
+        <div class="page-title-header">
+            <h2>Eventos da Igreja</h2>
+            <button type="button" class="add-event-btn" id="showAddEventFormBtn">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                Adicionar Novo Evento
+            </button>
+        </div>
+
+        <div class="add-event-form-container" id="addEventForm" style="display: none;">
+            <h3>Criar Novo Evento</h3>
+            <form id="newEventForm">
+                <div class="form-group">
+                    <label for="event_title">Título do Evento</label>
+                    <input type="text" id="event_title" name="event_title" required>
+                </div>
+                <div class="form-group">
+                    <label for="event_date">Data</label>
+                    <input type="date" id="event_date" name="event_date" required>
+                </div>
+                <div class="form-group">
+                    <label for="event_time">Hora</label>
+                    <input type="time" id="event_time" name="event_time" required>
+                </div>
+                <div class="form-group">
+                    <label for="event_location">Local</label>
+                    <input type="text" id="event_location" name="event_location" required>
+                </div>
+                <div class="form-group">
+                    <label for="event_description">Descrição</label>
+                    <textarea id="event_description" name="event_description" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="event_image_upload">Imagem do Evento (Opcional)</label>
+                    <input type="file" id="event_image_upload" name="event_image_upload" accept="image/*">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="secondary" id="cancelAddEventBtn">Cancelar</button>
+                    <button type="submit" class="primary">Guardar Evento</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="events-filter">
+            <label for="eventSort" style="font-size:0.9em; margin-right:5px; font-weight:500;">Ordenar por:</label>
+            <select id="eventSort" name="eventSort">
+                <option value="date_desc">Data Mais Recente</option>
+                <option value="date_asc">Data Mais Antiga</option>
+                <option value="title_asc">Nome (A-Z)</option>
+            </select>
+        </div>
+
+        <div class="event-list" id="eventListContainer">
+            <p style="text-align:center; color:#606770;">Carregando eventos...</p>
+        </div>
+    </div>
+
+    <script>
+        // Removido SUPABASE_URL e SUPABASE_ANON_KEY duplicados
+        // let supabaseClient = null;
+        const supabaseClient = initSupabase();
+
+        if (!supabaseClient) {
+            NotificationSystem.error('Erro de configuração do Supabase.');
+        }
+
+        const usernameDisplayHeader = document.getElementById('usernameDisplayHeader');
+        const profileLinkHeader = document.getElementById('profileLinkHeader');
+        const adminLinkHeader = document.getElementById('adminLinkHeader');
+        const logoutButtonHeader = document.getElementById('logoutButtonHeader');
+        const loginLinkHeader = document.getElementById('loginLinkHeader');
+        const dashboardLinkHeader = document.getElementById('dashboardLinkNavHeader');
+
+        async function checkSessionAndSetupHeader() {
+            if (!supabaseClient) return;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session && session.user) {
+                const { data: profile } = await supabaseClient.from('profiles').select('full_name').eq('id', session.user.id).single();
+                if(usernameDisplayHeader) {
+                    usernameDisplayHeader.textContent = profile?.full_name || session.user.email;
+                    usernameDisplayHeader.style.display = 'inline';
+                }
+                if(profileLinkHeader) profileLinkHeader.style.display = 'inline-flex';
+                if(adminLinkHeader) adminLinkHeader.style.display = 'inline-flex'; // Ajustar com roles
+                if(logoutButtonHeader) logoutButtonHeader.style.display = 'inline-flex';
+                if(loginLinkHeader) loginLinkHeader.style.display = 'none';
+                if(dashboardLinkHeader) dashboardLinkHeader.style.display = 'inline-flex';
+            } else {
+                if(usernameDisplayHeader) usernameDisplayHeader.style.display = 'none';
+                if(profileLinkHeader) profileLinkHeader.style.display = 'none';
+                if(adminLinkHeader) adminLinkHeader.style.display = 'none';
+                if(logoutButtonHeader) logoutButtonHeader.style.display = 'none';
+                if(loginLinkHeader) loginLinkHeader.style.display = 'inline-flex';
+                if(dashboardLinkHeader) dashboardLinkHeader.style.display = 'none';
+                 // Não redireciona automaticamente para login, permitindo visualização pública de eventos (se as políticas RLS permitirem)
+            }
+
+            // Integração REST Supabase: buscar full_name do usuário logado
+            try {
+                const url = `https://bilhtpgelctnybjemzeg.supabase.co/rest/v1/profiles?select=full_name&id=eq.${session.user.id}`;
+                const response = await fetch(url, {
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${session.access_token}`
+                    }
+                });
+                const restData = await response.json();
+                if (restData && restData.length > 0) {
+                    console.log('REST full_name:', restData[0].full_name);
+                }
+            } catch (err) {
+                console.error('Erro na requisição REST do Supabase:', err);
+            }
+        }
+         if (logoutButtonHeader) {
+            logoutButtonHeader.addEventListener('click', async (e) => {
+                e.preventDefault();
+                if (!supabaseClient) return;
+                await supabaseClient.auth.signOut();
+                window.location.href = './index.html';
+            });
+        }
+
+        const addEventForm = document.getElementById('addEventForm');
+        const showAddEventFormBtn = document.getElementById('showAddEventFormBtn');
+        const cancelAddEventBtn = document.getElementById('cancelAddEventBtn');
+
+        function toggleAddEventFormDisplay(show) {
+            if (addEventForm) addEventForm.style.display = show ? 'block' : 'none';
+            if (showAddEventFormBtn) showAddEventFormBtn.style.display = show ? 'none' : 'flex';
+        }
+
+        if (showAddEventFormBtn) {
+            showAddEventFormBtn.addEventListener('click', () => toggleAddEventFormDisplay(true));
+        }
+        if (cancelAddEventBtn) {
+            cancelAddEventBtn.addEventListener('click', () => toggleAddEventFormDisplay(false));
+        }
+
+        async function fetchEvents() {
+            const eventListContainer = document.getElementById('eventListContainer');
+            if (!supabaseClient || !eventListContainer) return;
+            eventListContainer.innerHTML = '<p style="text-align:center; color:#606770;">Carregando eventos...</p>';
+
+            const sortSelect = document.getElementById('eventSort');
+            let orderByField = 'event_date';
+            let orderAsc = false;
+
+            if (sortSelect.value === 'date_asc') {
+                orderAsc = true;
+            } else if (sortSelect.value === 'title_asc') {
+                orderByField = 'title';
+                orderAsc = true;
+            } // date_desc é o padrão
+
+            const { data: events, error } = await supabaseClient
+                .from('events')
+                .select('*')
+                .order(orderByField, { ascending: orderAsc })
+                .limit(50); // Adicionar paginação no futuro
+
+            if (error) {
+                console.error('Erro ao buscar eventos:', error);
+                eventListContainer.innerHTML = '<p style="text-align:center; color:red;">Erro ao carregar eventos.</p>';
+                return;
+            }
+
+            if (events && events.length > 0) {
+                eventListContainer.innerHTML = ''; 
+                events.forEach(event => {
+                    const eventCard = document.createElement('div');
+                    eventCard.classList.add('event-card');
+                    const eventDate = new Date(event.event_date + 'T' + event.event_time); 
+                    
+                    eventCard.innerHTML = `
+                        <div class="event-image" style="background-image: url('${event.image_url || 'https://placehold.co/600x400/cccccc/757575?text=Evento'}');" aria-label="Imagem do evento ${event.title}" role="img"></div>
+                        <div class="event-details">
+                            <h3>${event.title}</h3>
+                            <p class="event-info">
+                                <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+                                ${eventDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })} às ${eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            <p class="event-info">
+                                <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                ${event.location}
+                            </p>
+                            <p class="event-description">
+                                ${event.description.substring(0, 100)}${event.description.length > 100 ? '...' : ''}
+                            </p>
+                            <div class="event-actions">
+                                <button type="button">Ver Detalhes</button>
+                            </div>
+                        </div>
+                    `;
+                    eventListContainer.appendChild(eventCard);
+                });
+            } else {
+                eventListContainer.innerHTML = '<p style="text-align:center; color:#606770;">Nenhum evento encontrado.</p>';
+            }
+        }
+
+        const newEventForm = document.getElementById('newEventForm');
+        if (newEventForm) {
+            newEventForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!supabaseClient) { NotificationSystem.error('Cliente Supabase não inicializado.'); return; }
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session || !session.user) { NotificationSystem.error('Você precisa estar logado para adicionar eventos.'); return; }
+
+                const title = document.getElementById('event_title').value;
+                const event_date = document.getElementById('event_date').value;
+                const event_time = document.getElementById('event_time').value;
+                const location = document.getElementById('event_location').value;
+                const description = document.getElementById('event_description').value;
+                const imageFile = document.getElementById('event_image_upload').files[0];
+                let imageUrlToSave = null;
+
+                if (imageFile) {
+                    const fileName = `events/${user.id}_${Date.now()}_${imageFile.name}`;
+                    alert(`Simulando upload da imagem do evento: ${fileName}. Numa app real, aqui ocorreria o upload.`);
+                    // const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('event_images').upload(fileName, imageFile);
+                    // if (uploadError) { console.error('Erro upload imagem evento:', uploadError); alert('Erro ao carregar imagem.'); }
+                    // else { const { data: { publicUrl } } = supabaseClient.storage.from('event_images').getPublicUrl(uploadData.path); imageUrlToSave = publicUrl; }
+                    imageUrlToSave = 'https://placehold.co/600x400/9C27B0/FFFFFF?text=EventoNovo'; // Placeholder
+                }
+
+                const { data: newEventData, error: insertError } = await supabaseClient
+                    .from('events')
+                    .insert([{ 
+                        title, 
+                        event_date, 
+                        event_time, 
+                        location, 
+                        description, 
+                        image_url: imageUrlToSave, 
+                        created_by: user.id 
+                    }])
+                    .select();
+
+                if (insertError) { NotificationSystem.error('Erro ao guardar evento: ' + insertError.message); }
+                else { NotificationSystem.success('Evento criado com sucesso!'); newEventForm.reset(); toggleAddEventFormDisplay(false); fetchEvents(); }
+            });
+        }
+        
+        const eventSortSelect = document.getElementById('eventSort');
+        if(eventSortSelect) {
+            eventSortSelect.addEventListener('change', fetchEvents);
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            checkSessionAndSetupHeader();
+            fetchEvents(); 
+        });
+    </script>
+</body>
+</html>
+
+<!-- Exemplo de avatar acessível para participante ou evento -->
+<!-- <img src="URL_DO_AVATAR" alt="Avatar de PARTICIPANTE/EVENTO" aria-label="Avatar de PARTICIPANTE/EVENTO" role="img"> -->

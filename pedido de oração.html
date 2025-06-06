@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos de Oração - Igreja Conectada</title>
+    <link rel="stylesheet" href="css/global.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/supabaseClient.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            color: #1c1e21;
+            line-height: 1.4;
+        }
+        * { box-sizing: border-box; }
+        a { text-decoration: none; color: #1877f2; }
+        a:hover { text-decoration: underline; }
+        button { cursor: pointer; font-family: inherit; }
+        input, textarea, select { font-family: inherit; }
+
+        .main-header {
+            background-color: #1877f2; color: white; padding: 8px 15px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky;
+            top: 0; z-index: 1000; width: 100%;
+        }
+        .main-header .logo a { color: white; text-decoration: none; font-size: 1.4em; font-weight: 600; }
+        .main-header .header-nav a, .main-header .user-actions a {
+            color: white; text-decoration: none; margin-left: 15px; font-size: 0.9em;
+            display: inline-flex; align-items: center;
+        }
+        .main-header .user-actions svg, .main-header .header-nav svg {
+            vertical-align: middle; margin-right: 4px; width: 18px; height: 18px; fill: white;
+        }
+        .main-header .user-actions .username-display { font-weight: 500; margin-right: 10px;}
+        #adminLinkHeader, #logoutButtonHeader, #profileLinkHeader, #dashboardLinkNavHeader { display: none; }
+        #loginLinkHeader {display: inline-flex;}
+
+        .prayer-requests-page-container {
+            max-width: 800px; 
+            margin: 20px auto;
+            padding: 0 15px 20px 15px;
+        }
+
+        .page-title-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 15px;
+        }
+        .page-title-header h2 {
+            font-size: 1.8em;
+            color: #1c1e21;
+            margin: 0;
+        }
+        .add-request-btn {
+            background-color: #28a745; 
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        .add-request-btn svg {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            fill: white;
+        }
+        .add-request-btn:hover {
+            background-color: #218838;
+        }
+
+        .add-request-form-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .add-request-form-container h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            color: #050505;
+            font-weight: 600;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            font-size: 0.85em;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .form-group input[type="text"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.9em;
+            font-family: inherit;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .form-group .radio-group label {
+            font-weight: normal;
+            font-size: 0.9em;
+            margin-right: 15px;
+            display: inline-flex; /* Para melhor alinhamento */
+            align-items: center;
+        }
+        .form-group .radio-group input[type="radio"] {
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        .form-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .form-actions button {
+            padding: 9px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .form-actions button.primary {
+            background-color: #1877f2;
+            color: white;
+        }
+        .form-actions button.secondary {
+            background-color: #e4e6eb;
+            color: #050505;
+        }
+         .form-actions button:hover {
+            filter: brightness(0.95);
+        }
+
+        .prayer-request-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .prayer-request-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 15px;
+            transition: box-shadow 0.2s ease-in-out;
+        }
+        .prayer-request-card:hover {
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+        .prayer-request-card .request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .prayer-request-card .request-header .requester-name {
+            font-size: 1em;
+            font-weight: 600;
+            color: #050505;
+        }
+        .prayer-request-card .request-header .request-date {
+            font-size: 0.8em;
+            color: #606770;
+        }
+        .prayer-request-card .request-category {
+            font-size: 0.8em;
+            color: #1877f2;
+            font-weight: 500;
+            background-color: #e7f3ff;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .prayer-request-card .request-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            white-space: pre-wrap; 
+        }
+        .prayer-request-card .request-actions {
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid #e9ebee;
+            padding-top: 10px;
+        }
+        .prayer-request-card .request-actions button {
+            background-color: transparent;
+            border: none;
+            color: #606770;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.85em;
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            border-radius: 4px;
+        }
+        .prayer-request-card .request-actions button:hover {
+            background-color: #f0f2f5;
+        }
+        .prayer-request-card .request-actions button svg {
+            width: 16px;
+            height: 16px;
+            fill: #606770;
+            margin-right: 5px;
+        }
+
+        /* Responsividade */
+        @media (max-width: 600px) {
+            .main-header .header-nav { display: none; }
+            .fb-header h1 { font-size: 1.3em; }
+            .prayer-requests-page-container { margin-top: 15px; padding: 0 10px 15px 10px;}
+            .page-title-header { flex-direction: column; align-items: flex-start; gap: 10px;}
+            .page-title-header h2 { font-size: 1.5em; }
+            .add-request-form-container { padding: 15px; }
+            .add-request-form-container h3 { font-size: 1.2em; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo">
+            <a href="./dashboard.html">Igreja Conectada</a>
+        </div>
+        <nav class="header-nav">
+            <a href="./dashboard_feed_layout_v1.html" id="dashboardLinkNavHeader">
+                <svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3zm5 15h-2v-6H9v6H7v-7.81l5-4.5 5 4.5V18z"/></svg>
+                <span>Dashboard</span>
+            </a>
+            <a href="./eventos.html">Eventos</a>
+            <a href="./pedido de oração.html">Pedidos de Oração</a>
+            <a href="./doações.html">Doações</a>
+        </nav>
+        <div class="user-actions">
+            <span id="usernameDisplayHeader" class="username-display" style="display:none;"></span>
+            <a href="./Perfil.html" id="profileLinkHeader" style="display:none;">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                <span>Perfil</span>
+            </a>
+            <a href="./admin_panel.html" id="adminLinkHeader" style="display:none;">
+                 <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.44 2.67 14.2 2.5 13.96 2.5h-4c-.25 0-.48.17-.54.42l-.38 2.65c-.61-.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.06.25.29.42.54.42h4c.25 0 .48-.17.54-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+                <span>Admin</span>
+            </a>
+            <a href="#" id="logoutButtonHeader" style="display:none;">
+                <svg viewBox="0 0 24 24"><path d="M16 17v-3H9v-4h7V7l5 5-5 5zM14 2a2 2 0 0 1 2 2v2h-2V4H5v16h9v-2h2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9z"/></svg>
+                <span>Sair</span>
+            </a>
+            <a href="./login.html" id="loginLinkHeader">Login</a>
+        </div>
+    </header>
+
+    <div class="prayer-requests-page-container">
+        <div class="page-title-header">
+            <h2>Pedidos de Oração</h2>
+            <button type="button" class="add-request-btn" id="showAddRequestFormBtn">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                Fazer um Pedido
+            </button>
+        </div>
+
+        <div class="add-request-form-container" id="addRequestForm" style="display: none;">
+            <h3>Submeter Pedido de Oração</h3>
+            <form id="newPrayerRequestForm">
+                <div class="form-group">
+                    <label for="requester_name">Seu Nome (Opcional, deixe em branco para anónimo)</label>
+                    <input type="text" id="requester_name" name="requester_name" placeholder="Ex: João S. ou Anónimo">
+                </div>
+                <div class="form-group">
+                    <label for="prayer_request_text">Pedido de Oração</label>
+                    <textarea id="prayer_request_text" name="prayer_request_text" rows="5" required placeholder="Descreva aqui o seu pedido..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="prayer_category">Categoria</label>
+                    <select id="prayer_category" name="prayer_category">
+                        <option value="saude">Saúde</option>
+                        <option value="familia">Família</option>
+                        <option value="financas">Finanças</option>
+                        <option value="trabalho_estudos">Trabalho/Estudos</option>
+                        <option value="agradecimento">Agradecimento</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Visibilidade do Pedido:</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="visibility" value="publico" checked> Público (visível a todos os membros)</label>
+                        <br>
+                        <label><input type="radio" name="visibility" value="privado_lideres"> Privado (apenas para líderes da igreja)</label>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="secondary" id="cancelAddRequestBtn">Cancelar</button>
+                    <button type="submit" class="primary">Enviar Pedido</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="prayer-request-list" id="prayerRequestListContainer">
+            <p style="text-align:center; color:#606770;">Carregando pedidos de oração...</p>
+        </div>
+    </div>
+
+    <script>
+        // Removido SUPABASE_URL e SUPABASE_ANON_KEY duplicados
+        // let supabaseClient = null;
+        const supabaseClient = initSupabase();
+
+        if (!supabaseClient) {
+            NotificationSystem.error('Erro de configuração do Supabase.');
+        }
+
+        const usernameDisplayHeader = document.getElementById('usernameDisplayHeader');
+        const profileLinkHeader = document.getElementById('profileLinkHeader');
+        const adminLinkHeader = document.getElementById('adminLinkHeader');
+        const logoutButtonHeader = document.getElementById('logoutButtonHeader');
+        const loginLinkHeader = document.getElementById('loginLinkHeader');
+        const dashboardLinkHeader = document.getElementById('dashboardLinkNavHeader');
+
+        async function checkSessionAndSetupHeader() {
+            if (!supabaseClient) return;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session && session.user) {
+                const { data: profile } = await supabaseClient.from('profiles').select('full_name').eq('id', session.user.id).single();
+                if(usernameDisplayHeader) {
+                    usernameDisplayHeader.textContent = profile?.full_name || session.user.email;
+                    usernameDisplayHeader.style.display = 'inline';
+                }
+                if(profileLinkHeader) profileLinkHeader.style.display = 'inline-flex';
+                if(adminLinkHeader) adminLinkHeader.style.display = 'inline-flex'; 
+                if(logoutButtonHeader) logoutButtonHeader.style.display = 'inline-flex';
+                if(loginLinkHeader) loginLinkHeader.style.display = 'none';
+                if(dashboardLinkHeader) dashboardLinkHeader.style.display = 'inline-flex';
+
+                // Integração REST Supabase: buscar full_name do usuário logado
+                try {
+                    const url = `https://bilhtpgelctnybjemzeg.supabase.co/rest/v1/profiles?select=full_name&id=eq.${session.user.id}`;
+                    const response = await fetch(url, {
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.ANON_KEY,
+                            'Authorization': `Bearer ${session.access_token}`
+                        }
+                    });
+                    const restData = await response.json();
+                    if (restData && restData.length > 0) {
+                        console.log('REST full_name:', restData[0].full_name);
+                    }
+                } catch (err) {
+                    console.error('Erro na requisição REST do Supabase:', err);
+                }
+            } else {
+                if(usernameDisplayHeader) usernameDisplayHeader.style.display = 'none';
+                if(profileLinkHeader) profileLinkHeader.style.display = 'none';
+                if(adminLinkHeader) adminLinkHeader.style.display = 'none';
+                if(logoutButtonHeader) logoutButtonHeader.style.display = 'none';
+                if(loginLinkHeader) loginLinkHeader.style.display = 'inline-flex';
+                if(dashboardLinkHeader) dashboardLinkHeader.style.display = 'none';
+            }
+        }
+         if (logoutButtonHeader) {
+            logoutButtonHeader.addEventListener('click', async (e) => {
+                e.preventDefault();
+                if (!supabaseClient) return;
+                await supabaseClient.auth.signOut();
+                window.location.href = './index.html';
+            });
+        }
+
+        const addRequestForm = document.getElementById('addRequestForm');
+        const showAddRequestFormBtn = document.getElementById('showAddRequestFormBtn');
+        const cancelAddRequestBtn = document.getElementById('cancelAddRequestBtn');
+
+        function toggleAddRequestFormDisplay(show) {
+            if (addRequestForm) addRequestForm.style.display = show ? 'block' : 'none';
+            if (showAddRequestFormBtn) showAddRequestFormBtn.style.display = show ? 'none' : 'flex';
+        }
+
+        if (showAddRequestFormBtn) {
+            showAddRequestFormBtn.addEventListener('click', () => toggleAddRequestFormDisplay(true));
+        }
+        if (cancelAddRequestBtn) {
+            cancelAddRequestBtn.addEventListener('click', () => toggleAddRequestFormDisplay(false));
+        }
+
+        async function fetchPrayerRequests() {
+            const listContainer = document.getElementById('prayerRequestListContainer');
+            if (!supabaseClient || !listContainer) return;
+            listContainer.innerHTML = '<p style="text-align:center; color:#606770;">Carregando pedidos...</p>';
+
+            const { data: requests, error } = await supabaseClient
+                .from('prayer_requests')
+                .select('*, profiles (full_name)') 
+                .order('created_at', { ascending: false })
+                .limit(50); // Adicionar paginação no futuro
+
+            if (error) {
+                console.error('Erro ao buscar pedidos de oração:', error);
+                listContainer.innerHTML = '<p style="text-align:center; color:red;">Erro ao carregar pedidos.</p>';
+                return;
+            }
+
+            if (requests && requests.length > 0) {
+                listContainer.innerHTML = ''; 
+                requests.forEach(req => {
+                    const card = document.createElement('div');
+                    card.classList.add('prayer-request-card');
+                    
+                    let requesterDisplay = req.requester_name || (req.profiles ? req.profiles.full_name : 'Anónimo');
+                    if (!requesterDisplay || requesterDisplay.trim() === "") requesterDisplay = 'Anónimo';
+
+
+                    card.innerHTML = `
+                        <div class="request-header">
+                            <!-- Exemplo de avatar acessível para solicitante de oração -->
+                            <!-- <img src="URL_DO_AVATAR" alt="Avatar de ${requesterDisplay}" aria-label="Avatar de ${requesterDisplay}" role="img"> -->
+                            <span class="requester-name">${requesterDisplay}</span>
+                            <span class="request-date">${new Date(req.created_at).toLocaleDateString('pt-BR', {day: '2-digit', month: 'short', year: 'numeric'})}</span>
+                        </div>
+                        ${req.category ? `<span class="request-category">${req.category.charAt(0).toUpperCase() + req.category.slice(1)}</span>` : ''}
+                        <p class="request-text">${req.request_text.replace(/\n/g, '<br>')}</p>
+                        <div class="request-actions">
+                            <button type="button" class="pray-button" data-request-id="${req.id}">
+                                <svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.07.07-.07-.07C7.32 14.48 4 11.79 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 3.29-3.32 5.98-7.53 10.05z"/></svg>
+                                Orei por este pedido (0) <!-- Contador será atualizado por JS -->
+                            </button>
+                            <button type="button" class="comment-button" data-request-id="${req.id}">
+                                <svg viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+                                Comentar (0) <!-- Contador será atualizado por JS -->
+                            </button>
+                        </div>
+                    `;
+                    listContainer.appendChild(card);
+                });
+            } else {
+                listContainer.innerHTML = '<p style="text-align:center; color:#606770;">Nenhum pedido de oração encontrado.</p>';
+            }
+        }
+        
+        const newPrayerRequestForm = document.getElementById('newPrayerRequestForm');
+        if (newPrayerRequestForm) {
+            newPrayerRequestForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!supabaseClient) { NotificationSystem.error('Cliente Supabase não inicializado.'); return; }
+                const { data: { user } } = await supabaseClient.auth.getUser(); 
+                // Não é obrigatório estar logado para enviar pedido, mas se estiver, associamos o user_id
+
+                const requester_name_input = document.getElementById('requester_name').value.trim();
+                const request_text = document.getElementById('prayer_request_text').value.trim();
+                const category = document.getElementById('prayer_category').value;
+                const visibility = document.querySelector('input[name="visibility"]:checked').value;
+
+                if (!request_text) { NotificationSystem.error('Por favor, escreva o seu pedido de oração.'); return; }
+
+                const newRequest = {
+                    request_text,
+                    category,
+                    visibility,
+                    requester_name: requester_name_input || null, 
+                    user_id: user ? user.id : null 
+                };
+
+                const { data, error } = await supabaseClient
+                    .from('prayer_requests')
+                    .insert([newRequest])
+                    .select();
+
+                if (error) {
+                    console.error('Erro ao submeter pedido de oração:', error);
+                    NotificationSystem.error('Erro ao enviar pedido: ' + error.message);
+                } else {
+                    NotificationSystem.success('Pedido de oração enviado com sucesso!');
+                    newPrayerRequestForm.reset();
+                    toggleAddRequestFormDisplay(false);
+                    fetchPrayerRequests(); 
+                }
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            checkSessionAndSetupHeader();
+            fetchPrayerRequests(); 
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil do Utilizador - Igreja Conectada</title>
+    <link rel="stylesheet" href="css/global.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/supabaseClient.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5; 
+            margin: 0;
+            padding: 0;
+            color: #1c1e21; 
+            line-height: 1.4; 
+        }
+        * { box-sizing: border-box; }
+        a { text-decoration: none; color: #1877f2; }
+        a:hover { text-decoration: underline; }
+        button { cursor: pointer; font-family: inherit; }
+        input, textarea, select { font-family: inherit; }
+
+        .main-header {
+            background-color: #1877f2; color: white; padding: 8px 15px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky;
+            top: 0; z-index: 1000; width: 100%;
+        }
+        .main-header .logo a { color: white; text-decoration: none; font-size: 1.4em; font-weight: 600; }
+        .main-header .header-nav a, .main-header .user-actions a {
+            color: white; text-decoration: none; margin-left: 15px; font-size: 0.9em;
+            display: inline-flex; align-items: center;
+        }
+        .main-header .user-actions svg, .main-header .header-nav svg {
+            vertical-align: middle; margin-right: 4px; width: 18px; height: 18px; fill: white;
+        }
+        .main-header .user-actions .username-display { font-weight: 500; margin-right: 10px;}
+        #adminLinkHeader, #logoutButtonHeader, #profileLinkHeader, #dashboardLinkNavHeader { display: none; }
+        #loginLinkHeader {display: inline-flex;}
+
+
+        .profile-page-container {
+            max-width: 900px; 
+            margin: 0 auto;
+            padding-bottom: 20px;
+        }
+
+        .profile-header-banner {
+            background-color: #ccd0d5; 
+            height: 320px; 
+            background-image: url('https://placehold.co/900x320/E0E0E0/CCCCCC?text=Foto+de+Capa');
+            background-size: cover;
+            background-position: center;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        .profile-info-bar {
+            background-color: #fff;
+            padding: 0 20px; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
+            border-bottom: 1px solid #ddd; 
+            display: flex;
+            align-items: flex-end;
+            position: relative;
+        }
+        
+        .profile-picture-and-name {
+            display: flex;
+            align-items: flex-end;
+            margin-top: -60px; 
+            padding-bottom: 15px; 
+            flex-grow: 1;
+        }
+
+        .profile-picture-container {
+            border: 4px solid #fff;
+            border-radius: 50%;
+            background-color: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            margin-right: 15px; 
+            margin-left: 15px; 
+        }
+
+        .profile-picture-container img {
+            width: 150px; 
+            height: 150px;
+            border-radius: 50%;
+            display: block;
+            background-color: #e0e0e0;
+        }
+
+        .profile-name-details { 
+             padding-top: 50px; 
+        }
+        .profile-name-details h1 {
+            font-size: 1.8em; 
+            color: #1c1e21;
+            font-weight: 700;
+            margin: 0 0 3px 0; 
+        }
+        .profile-name-details .profile-bio {
+            font-size: 0.9em;
+            color: #606770;
+            margin-bottom: 0; 
+        }
+
+        .profile-actions-container {
+            padding-bottom: 15px; 
+        }
+        .profile-actions button {
+            background-color: #e4e6eb;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-weight: 600;
+            color: #050505;
+            cursor: pointer;
+            margin-left: 8px; 
+            font-size: 0.85em; 
+        }
+        .profile-actions button.primary {
+            background-color: #1877f2;
+            color: white;
+        }
+        .profile-actions button:hover {
+            filter: brightness(0.95);
+        }
+        .profile-actions button svg {
+            vertical-align: middle;
+            margin-right: 4px;
+        }
+
+        .profile-nav-tabs {
+            background-color: #fff;
+            border-bottom: 1px solid #ddd;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            padding: 0 20px; 
+        }
+        .profile-nav-tabs ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+        }
+        .profile-nav-tabs ul li a {
+            display: block;
+            padding: 14px 16px; 
+            text-decoration: none;
+            color: #606770; 
+            font-weight: 600;
+            font-size: 0.9em; 
+            border-bottom: 3px solid transparent;
+            transition: color 0.2s ease, border-bottom-color 0.2s ease; 
+        }
+        .profile-nav-tabs ul li a.active,
+        .profile-nav-tabs ul li a:hover {
+            color: #1877f2;
+            border-bottom-color: #1877f2;
+        }
+
+        .profile-content-area {
+            display: flex;
+            padding: 15px; 
+            gap: 15px; 
+        }
+
+        .profile-main-column { 
+            flex-grow: 1;
+        }
+        
+        .profile-sidebar-column { 
+            flex-basis: 320px; 
+            flex-shrink: 0;
+        }
+
+        .fb-card { 
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        .fb-card h3 { 
+            margin-top: 0;
+            font-size: 1em; 
+            color: #050505;
+            border-bottom: 1px solid #e9ebee;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .fb-card p, .fb-card ul li {
+            font-size: 0.85em; 
+            color: #1c1e21;
+        }
+        .fb-card ul { list-style: none; padding: 0; }
+         .fb-card ul li { padding: 5px 0; }
+         .fb-card .detail-item { margin-bottom: 8px; display:flex; align-items:center; }
+         .fb-card .detail-item strong { color: #606770; display: inline-block; font-weight:500; min-width:130px;}
+         .fb-card .detail-item svg { fill: #606770; margin-right: 8px; width:16px; height:16px; }
+
+        /* Estilos para postagens (consistentes com o dashboard compacto) */
+        .create-post-card { margin-bottom: 15px; }
+        .create-post-card textarea {
+            width: 100%; border: 1px solid #ddd; padding: 8px; font-family: inherit; font-size: 0.95em;
+            resize: none; min-height: 50px; box-sizing: border-box; border-radius: 6px; margin-bottom: 8px;
+        }
+        .create-post-card .post-actions { display: flex; justify-content: space-between; align-items: center; }
+        .create-post-card .post-actions .action-buttons button { background: none; border: none; cursor: pointer; padding: 6px; color: #606770; }
+        .create-post-card .post-actions .action-buttons button svg { fill: #606770; vertical-align: middle; width:18px; height:18px;}
+        .create-post-card .post-actions .action-buttons button:hover { background-color: #f0f2f5; border-radius: 4px;}
+        .create-post-card .post-actions button.primary {
+            background-color: #1877f2; color: white; border: none; padding: 6px 12px;
+            border-radius: 4px; font-weight: bold; font-size: 0.9em; cursor: pointer;
+        }
+        .create-post-card .post-actions button.primary:hover { background-color: #166fe5; }
+
+        .post-card .post-header { display: flex; align-items: center; margin-bottom: 8px; }
+        .post-card .post-header img { width: 36px; height: 36px; border-radius: 50%; margin-right: 8px; background-color: #ccc; background-size:cover; background-position:center;}
+        .post-card .post-header .user-info strong { display: block; font-weight: 600; color: #050505; font-size: 0.9em;}
+        .post-card .post-header .user-info span { font-size: 0.75em; color: #606770; }
+        .post-card .post-content p { margin-bottom: 8px; font-size: 0.9em; white-space: pre-wrap;}
+        .post-card .post-image img { max-width: 100%; border-radius: 4px; margin-bottom: 8px; }
+        .post-card .post-actions-bar { display: flex; justify-content: space-around; border-top: 1px solid #e9ebee; padding-top: 6px; }
+        .post-card .post-actions-bar button {
+            background: none; border: none; color: #606770; font-weight: 600; cursor: pointer; 
+            padding: 6px 8px; flex-grow: 1; font-size: 0.85em; 
+        }
+        .post-card .post-actions-bar button:hover { background-color: #f0f2f5; border-radius: 4px; }
+        .post-card .post-actions-bar button svg { vertical-align: middle; margin-right: 4px; fill: #606770; width:16px; height:16px;}
+
+        /* Responsividade */
+        @media (max-width: 900px) {
+            .profile-info-bar { flex-direction: column; align-items: center; padding-left: 20px; padding-right: 20px; text-align: center; }
+            .profile-picture-and-name { margin-top: -80px; flex-direction: column; align-items: center; }
+            .profile-picture-container { margin-right: 0; margin-bottom: 10px; }
+             .profile-name-details { padding-top: 0; }
+            .profile-actions-container { margin-top: 10px; width:100%; display: flex; justify-content: center; }
+            .profile-content-area { flex-direction: column; }
+            .profile-main-column, .profile-sidebar-column { max-width: 100%; flex-basis: auto; }
+        }
+        @media (max-width: 600px) {
+            .main-header .header-nav { display: none; }
+            .fb-header h1 { font-size: 1.3em; }
+            .profile-header-banner { height: 200px; }
+            .profile-picture-container img { width: 100px; height: 100px; } 
+            .profile-picture-and-name { margin-top: -50px; }
+            .profile-name-details h1 { font-size: 1.5em; }
+            .profile-actions button { font-size: 0.8em; padding: 6px 8px; }
+            .profile-nav-tabs { padding: 0 10px; }
+            .profile-nav-tabs ul li a { padding: 10px 8px; font-size: 0.85em; }
+            .profile-content-area { padding: 10px; gap: 10px; }
+            .fb-card { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="logo">
+            <a href="./dashboard.html">Igreja Conectada</a>
+        </div>
+        <nav class="header-nav">
+            <a href="./dashboard_feed_layout_v1.html" id="dashboardLinkNavHeader">
+                <svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3zm5 15h-2v-6H9v6H7v-7.81l5-4.5 5 4.5V18z"/></svg>
+                <span>Dashboard</span>
+            </a>
+            <a href="./eventos.html">Eventos</a>
+            <a href="./pedido de oração.html">Pedidos de Oração</a>
+            <a href="./doações.html">Doações</a>
+        </nav>
+        <div class="user-actions">
+            <span id="usernameDisplayHeader" class="username-display" style="display:none;"></span>
+            <a href="./Perfil.html" id="profileLinkHeader" style="display:none;">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                <span>Perfil</span>
+            </a>
+            <a href="./admin_panel.html" id="adminLinkHeader" style="display:none;">
+                 <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.44 2.67 14.2 2.5 13.96 2.5h-4c-.25 0-.48.17-.54.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c.04.32.07.65.07.98s-.03.66-.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.06.25.29.42.54.42h4c.25 0 .48-.17.54-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+                <span>Admin</span>
+            </a>
+            <a href="#" id="logoutButtonHeader" style="display:none;">
+                <svg viewBox="0 0 24 24"><path d="M16 17v-3H9v-4h7V7l5 5-5 5zM14 2a2 2 0 0 1 2 2v2h-2V4H5v16h9v-2h2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9z"/></svg>
+                <span>Sair</span>
+            </a>
+            <a href="./login.html" id="loginLinkHeader">Login</a>
+        </div>
+    </header>
+
+    <div class="profile-page-container">
+        <div class="profile-header-banner" id="profileCoverPhoto">
+            </div>
+
+        <div class="profile-info-bar">
+            <div class="profile-picture-and-name">
+                <div class="profile-picture-container">
+                    <img id="profileUserAvatar" src="https://placehold.co/150x150/cccccc/757575?text=?" alt="Foto do Perfil do usuário" aria-label="Avatar do usuário" role="img">
+                </div>
+                <div class="profile-name-details">
+                    <h1 id="profileFullName">Carregando Nome...</h1>
+                    <p class="profile-bio" id="profileUserBio">Carregando bio...</p>
+                </div>
+            </div>
+            <div class="profile-actions-container">
+                <div class="profile-actions" id="profileActionsButtons">
+                    </div>
+            </div>
+        </div>
+
+        <nav class="profile-nav-tabs">
+            <ul>
+                <li><a href="#" class="active" id="tabPostsLink">Publicações</a></li>
+                <li><a href="#" id="tabAboutLink">Sobre</a></li>
+                <li><a href="#" id="tabFriendsLink">Amigos <span id="friendsCount">(?)</span></a></li>
+                <li><a href="#" id="tabPhotosLink">Fotos</a></li>
+            </ul>
+        </nav>
+
+        <div class="profile-content-area">
+            <aside class="profile-sidebar-column" id="profileAboutContent" style="display:none;">
+                 <div class="fb-card">
+                    <h3>Sobre <span id="profileAboutName"></span></h3>
+                    <p class="detail-item" id="profileLocation"><strong><svg width="16" height="16" viewBox="0 0 24 24" fill="#606770" style="vertical-align:middle; margin-right:5px;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>Mora em:</strong> <span id="locationDetail">...</span></p>
+                    <p class="detail-item" id="profileChurchRole"><strong><svg width="16" height="16" viewBox="0 0 24 24" fill="#606770" style="vertical-align:middle; margin-right:5px;"><path d="M12 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>Cargo na Igreja:</strong> <span id="churchRoleDetail">...</span></p>
+                    <p class="detail-item" id="profileMinistry"><strong><svg width="16" height="16" viewBox="0 0 24 24" fill="#606770" style="vertical-align:middle; margin-right:5px;"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>Ministério:</strong> <span id="ministryDetail">...</span></p>
+                    <p class="detail-item" id="profileMemberSince"><strong><svg width="16" height="16" viewBox="0 0 24 24" fill="#606770" style="vertical-align:middle; margin-right:5px;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Membro Desde:</strong> <span id="memberSinceDetail">...</span></p>
+                    <p class="detail-item" id="profileFavVerse"><strong><svg width="16" height="16" viewBox="0 0 24 24" fill="#606770" style="vertical-align:middle; margin-right:5px;"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>Versículo:</strong> <span id="favVerseDetail">...</span></p>
+                </div>
+            </aside>
+            <div class="profile-main-column" id="profilePostsContent">
+                <div class="fb-card create-post-card" id="profileCreatePostBox" style="display:none;">
+                     <textarea id="profilePostContent" placeholder="Escreva algo no perfil de..."></textarea>
+                    <div class="post-actions">
+                        <div class="action-buttons"></div>
+                        <button type="button" id="submitProfilePostBtn" class="primary">Publicar</button>
+                    </div>
+                </div>
+                <div id="profileFeedContainer">
+                    <p style="text-align:center; color:#606770;">Carregando publicações...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Removido SUPABASE_URL e SUPABASE_ANON_KEY duplicados
+        // let supabaseClient = null;
+        const supabaseClient = initSupabase();
+
+        if (!supabaseClient) {
+            NotificationSystem.error('Erro de configuração do Supabase.');
+        }
+
+        const usernameDisplayHeader = document.getElementById('usernameDisplayHeader');
+        const profileLinkHeader = document.getElementById('profileLinkHeader');
+        const adminLinkHeader = document.getElementById('adminLinkHeader');
+        const logoutButtonHeader = document.getElementById('logoutButtonHeader');
+        const loginLinkHeader = document.getElementById('loginLinkHeader');
+        const dashboardLinkHeader = document.getElementById('dashboardLinkNavHeader');
+
+        async function checkSessionAndSetupHeader() {
+            if (!supabaseClient) return;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session && session.user) {
+                const { data: profile } = await supabaseClient.from('profiles').select('full_name').eq('id', session.user.id).single();
+                if(usernameDisplayHeader) {
+                    usernameDisplayHeader.textContent = profile?.full_name || session.user.email;
+                    usernameDisplayHeader.style.display = 'inline';
+                }
+                if(profileLinkHeader) profileLinkHeader.style.display = 'inline-flex';
+                if(adminLinkHeader) adminLinkHeader.style.display = 'inline-flex'; // Ajustar com roles
+                if(logoutButtonHeader) logoutButtonHeader.style.display = 'inline-flex';
+                if(loginLinkHeader) loginLinkHeader.style.display = 'none';
+                if(dashboardLinkHeader) dashboardLinkHeader.style.display = 'inline-flex';
+            } else {
+                if(usernameDisplayHeader) usernameDisplayHeader.style.display = 'none';
+                if(profileLinkHeader) profileLinkHeader.style.display = 'none';
+                if(adminLinkHeader) adminLinkHeader.style.display = 'none';
+                if(logoutButtonHeader) logoutButtonHeader.style.display = 'none';
+                if(loginLinkHeader) loginLinkHeader.style.display = 'inline-flex';
+                if(dashboardLinkHeader) dashboardLinkHeader.style.display = 'none';
+                // Se não há sessão e estamos na página de perfil (que não seja a de login), redirecionar
+                if (!window.location.pathname.endsWith('login.html') && !window.location.pathname.endsWith('registo.html')) {
+                    window.location.href = './login.html';
+                }
+            }
+        }
+        if (logoutButtonHeader) {
+            logoutButtonHeader.addEventListener('click', async (e) => {
+                e.preventDefault();
+                if (!supabaseClient) return;
+                await supabaseClient.auth.signOut();
+                window.location.href = './index.html';
+            });
+        }
+
+
+        async function loadProfilePageData() {
+            if (!supabaseClient) {
+                document.getElementById('profileFullName').textContent = 'Erro Supabase';
+                return;
+            }
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            let profileUserIdToLoad = urlParams.get('id');
+            let isOwnProfile = false;
+            
+            const { data: { session } } = await supabaseClient.auth.getSession();
+
+            // Integração REST Supabase: buscar full_name do usuário logado
+            let restFullName = null;
+            try {
+                const url = `https://bilhtpgelctnybjemzeg.supabase.co/rest/v1/profiles?select=full_name&id=eq.${session.user.id}`;
+                const response = await fetch(url, {
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.ANON_KEY,
+                        'Authorization': `Bearer ${session.access_token}`
+                    }
+                });
+                const restData = await response.json();
+                if (restData && restData.length > 0) restFullName = restData[0].full_name;
+                console.log('REST full_name:', restFullName);
+            } catch (err) {
+                console.error('Erro na requisição REST do Supabase:', err);
+            }
+
+            if (!profileUserIdToLoad) { // Se nenhum ID na URL, é o perfil do utilizador logado
+                profileUserIdToLoad = session.user.id;
+                isOwnProfile = true;
+                // Exibir nome REST na interface, se disponível
+                if (restFullName && document.getElementById('profileFullName')) {
+                    document.getElementById('profileFullName').textContent = restFullName;
+                }
+            } else if (profileUserIdToLoad === session.user.id) {
+                isOwnProfile = true;
+            }
+            
+            // Carregar dados do perfil a ser visualizado
+            const { data: profileData, error: profileError } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('id', profileUserIdToLoad)
+                .single();
+
+            if (profileError && profileError.code !== 'PGRST116') {
+                console.error('Erro ao buscar perfil:', profileError.message);
+                document.getElementById('profileFullName').textContent = 'Erro ao carregar perfil.';
+                return;
+            }
+
+            const profileActionsButtons = document.getElementById('profileActionsButtons');
+            profileActionsButtons.innerHTML = ''; // Limpar botões
+
+            if (profileData) {
+                document.getElementById('profileFullName').textContent = profileData.full_name || 'Nome não disponível';
+                document.getElementById('profileUserBio').textContent = profileData.bio || 'Nenhuma bio disponível.';
+                document.getElementById('profileUserAvatar').src = profileData.avatar_url || `https://placehold.co/150x150/cccccc/757575?text=${(profileData.full_name || 'P').charAt(0).toUpperCase()}`;
+                if(profileData.cover_photo_url) document.getElementById('profileCoverPhoto').style.backgroundImage = `url('${profileData.cover_photo_url}')`;
+                else document.getElementById('profileCoverPhoto').style.backgroundImage = `url('https://placehold.co/900x320/E0E0E0/CCCCCC?text=Capa')`;
+
+                // Preencher "Sobre" na sidebar
+                document.getElementById('profileAboutName').textContent = profileData.full_name || '';
+                document.getElementById('locationDetail').textContent = profileData.location || 'Não informado';
+                document.getElementById('churchRoleDetail').textContent = profileData.church_role || 'Não informado';
+                document.getElementById('ministryDetail').textContent = "Ministério Exemplo"; // Este dado não está na tabela profiles
+                document.getElementById('memberSinceDetail').textContent = profileData.created_at ? new Date(profileData.created_at).toLocaleDateString('pt-BR', { year: 'numeric', month: 'long'}) : 'Não informado';
+                document.getElementById('favVerseDetail').textContent = profileData.favorite_verse || 'Não informado';
+                
+                const createPostBox = document.getElementById('profileCreatePostBox');
+                const createPostTextarea = createPostBox.querySelector('textarea');
+
+                if (isOwnProfile) {
+                    const editButton = document.createElement('button');
+                    editButton.className = 'primary';
+                    editButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg> Editar Perfil`;
+                    editButton.onclick = () => window.location.href = `./editar_perfil.html`; // Link para página de edição
+                    profileActionsButtons.appendChild(editButton);
+                    createPostTextarea.placeholder = "No que você está pensando?";
+                    createPostBox.style.display = 'block';
+                } else {
+                    // Botões para perfil de outros
+                    profileActionsButtons.innerHTML = `<button>Seguir</button><button>Mensagem</button>`;
+                    createPostTextarea.placeholder = `Escreva algo para ${profileData.full_name}...`;
+                    createPostBox.style.display = 'block'; // Permitir postar no perfil de outros
+                }
+                loadProfilePosts(profileUserIdToLoad, profileData.full_name, profileData.avatar_url);
+            } else {
+                document.getElementById('profileFullName').textContent = 'Perfil não encontrado.';
+            }
+            showProfileTab('posts'); // Mostrar aba de posts por defeito
+        }
+
+        function showProfileTab(tabName) {
+            const postsContent = document.getElementById('profilePostsContent');
+            const aboutContent = document.getElementById('profileAboutContent');
+            const tabPostsLink = document.getElementById('tabPostsLink');
+            const tabAboutLink = document.getElementById('tabAboutLink');
+
+            postsContent.style.display = tabName === 'posts' ? 'block' : 'none';
+            aboutContent.style.display = tabName === 'about' ? 'block' : 'none';
+            
+            tabPostsLink.classList.toggle('active', tabName === 'posts');
+            tabAboutLink.classList.toggle('active', tabName === 'about');
+        }
+
+        async function loadProfilePosts(userId, userName, userAvatar) {
+            const container = document.getElementById('profileFeedContainer');
+            if (!supabaseClient || !container) return;
+            container.innerHTML = '<p style="text-align:center; color:#606770;">Carregando publicações...</p>';
+            
+            const { data: posts, error } = await supabaseClient.from('posts')
+                .select('*') // Não precisa de join com profiles aqui, já temos os dados do perfil principal
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+
+            if (error) { console.error("Erro ao carregar posts do perfil:", error); container.innerHTML = '<p>Erro ao carregar posts.</p>'; return; }
+            
+            container.innerHTML = ''; // Limpar
+            if (posts && posts.length > 0) {
+                posts.forEach(post => {
+                    const postEl = document.createElement('div');
+                    postEl.className = 'fb-card post-card';
+                    const avatar = userAvatar || `https://placehold.co/36x36/cccccc/757575?text=${(userName || 'U').charAt(0).toUpperCase()}`;
+                    postEl.innerHTML = `
+                        <div class="post-header">
+                            <img src="${avatar}" alt="Avatar de ${userName || 'Utilizador'}" aria-label="Avatar de ${userName || 'Utilizador'}" role="img">
+                            <div class="user-info"><strong>${userName || 'Utilizador'}</strong><span>${new Date(post.created_at).toLocaleString('pt-BR')}</span></div>
+                        </div>
+                        <div class="post-content"><p>${post.content.replace(/\n/g, '<br>')}</p></div>
+                        <div class="post-actions-bar">
+                            <button><svg width="18" height="18" viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.07.07-.07-.07C7.32 14.48 4 11.79 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 3.29-3.32 5.98-7.53 10.05z"/></svg> Gostar</button>
+                            <button><svg width="18" height="18" viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg> Comentar</button>
+                        </div>`;
+                    container.appendChild(postEl);
+                });
+            } else {
+                container.innerHTML = '<p style="text-align:center; color:#606770;">Nenhuma publicação neste perfil.</p>';
+            }
+        }
+        
+        // Adicionar listener para o botão de submeter post no perfil
+        const submitProfilePostBtn = document.getElementById('submitProfilePostBtn');
+        if(submitProfilePostBtn){
+            submitProfilePostBtn.addEventListener('click', async () => {
+                if (!supabaseClient) return;
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const urlParams = new URLSearchParams(window.location.search);
+                const profileUserIdToLoad = urlParams.get('id') || (session ? session.user.id : null);
+
+                if (!session || !session.user || !profileUserIdToLoad) { 
+                    NotificationSystem.error('Erro: não foi possível identificar o utilizador ou o perfil.'); 
+                    return; 
+                }
+                
+                const content = document.getElementById('profilePostContent').value.trim();
+                if (!content) { NotificationSystem.error('A publicação não pode estar vazia.'); return; }
+
+                // Quem está a postar é sempre o utilizador logado (session.user.id)
+                // O user_id do post será o do utilizador logado.
+                // Se a ideia é "postar no mural de outro", a tabela 'posts' precisaria de uma coluna 'target_profile_id' ou similar.
+                // Por simplicidade, assumimos que o utilizador só posta no seu próprio mural ou no mural geral.
+                // Para este exemplo, vamos assumir que o post é do utilizador logado.
+                const { error } = await supabaseClient.from('posts').insert([{ user_id: session.user.id, content: content }]);
+                
+                if (error) { NotificationSystem.error('Erro ao publicar no perfil: ' + error.message); }
+                else { 
+                    document.getElementById('profilePostContent').value = ''; 
+                    loadProfilePosts(profileUserIdToLoad, document.getElementById('profileFullName').textContent, document.getElementById('profileUserAvatar').src); // Recarregar posts do perfil visualizado
+                }
+            });
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkSessionAndSetupHeader();
+            loadProfilePageData();
+
+            // Adicionar listeners para as abas do perfil
+            document.getElementById('tabPostsLink')?.addEventListener('click', (e) => { e.preventDefault(); showProfileTab('posts'); });
+            document.getElementById('tabAboutLink')?.addEventListener('click', (e) => { e.preventDefault(); showProfileTab('about'); });
+            // Adicionar listeners para outras abas se necessário
+        });
+    </script>
+</body>
+</html>
